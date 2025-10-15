@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>QR & 바코드 스캐너</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        #reader {
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            background: #000;
+        }
+        
+        #reader video {
+            border-radius: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .btn-start {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-stop {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .status.ready {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+        
+        .status.scanning {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status.stopped {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .results {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 15px;
+            min-height: 100px;
+        }
+        
+        .results h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .result-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+            word-break: break-all;
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .result-type {
+            font-size: 11px;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .result-data {
+            color: #333;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .result-time {
+            font-size: 10px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .no-results {
+            text-align: center;
+            color: #999;
+            padding: 30px;
+            font-size: 14px;
+        }
+
+        .clear-btn {
+            width: 100%;
+            padding: 10px;
+            background: #f3f4f6;
+            color: #666;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 10px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .clear-btn:active {
+            background: #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 QR & 바코드 스캐너</h1>
+        <p class="subtitle">카메라로 코드를 스캔하세요</p>
+        
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="both">전체</button>
+            <button class="mode-btn" data-mode="qr">QR만</button>
+            <button class="mode-btn" data-mode="barcode">바코드만</button>
+        </div>
+        
+        <div id="status" class="status ready">시작 버튼을 눌러주세요</div>
+        
+        <div id="reader"></div>
+        
+        <div class="controls">
+            <button id="startBtn" class="btn btn-start">▶ 스캔 시작</button>
+            <button id="stopBtn" class="btn btn-stop" disabled>⏹ 정지</button>
+        </div>
+        
+        <div class="results">
+            <h3>📋 스캔 결과</h3>
+            <div id="results-list">
+                <div class="no-results">아직 스캔된 코드가 없습니다</div>
+            </div>
+            <button id="clearBtn" class="clear-btn" style="display: none;">전체 삭제</button>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'both';
+        let scanning = false;
+        let html5QrCode = null;
+        const results = [];
+        
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDiv = document.getElementById('status');
+        const resultsList = document.getElementById('results-list');
+        const clearBtn = document.getElementById('clearBtn');
+        
+        // 모드 선택
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (scanning) {
+                    updateStatus('스캔을 먼저 정지해주세요', 'stopped');
+                    return;
+                }
+                
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
+            });
+        });
+        
+        // 시작 버튼
+        startBtn.addEventListener('click', startScanning);
+        
+        // 정지 버튼
+        stopBtn.addEventListener('click', stopScanning);
+
+        // 전체 삭제 버튼
+        clearBtn.addEventListener('click', () => {
+            results.length = 0;
+            updateResultsList();
+        });
+        
+        async function startScanning() {
+            try {
+                updateStatus('카메라 시작 중...', 'scanning');
+                
+                const config = getConfig();
+                
+                html5QrCode = new Html5Qrcode("reader");
+                
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    onScanError
+                );
+                
+                scanning = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                updateStatus('스캔 중... 코드를 카메라에 비춰주세요', 'scanning');
+                
+            } catch (err) {
+                console.error('스캔 시작 실패:', err);
+                updateStatus('카메라 접근 실패: ' + err, 'stopped');
+                alert('카메라를 시작할 수 없습니다.\n\n1. 카메라 권한을 허용했는지 확인하세요\n2. HTTPS 연결인지 확인하세요\n3. 다른 앱에서 카메라를 사용 중이 아닌지 확인하세요');
+            }
+        }
+        
+        async function stopScanning() {
+            if (html5QrCode && scanning) {
+                try {
+                    await html5QrCode.stop();
+                    html5QrCode.clear();
+                } catch (err) {
+                    console.error('정지 오류:', err);
+                }
+            }
+            
+            scanning = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus('스캔 정지됨', 'stopped');
+        }
+        
+        function getConfig() {
+            const baseConfig = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 }
+            };
+            
+            if (currentMode === 'qr') {
+                return {
+                    ...baseConfig,
+                    formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+                };
+            } else if (currentMode === 'barcode') {
+                return {
+                    ...baseConfig,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8,
+                        Html5QrcodeSupportedFormats.UPC_A,
+                        Html5QrcodeSupportedFormats.UPC_E,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.CODE_93,
+                        Html5QrcodeSupportedFormats.ITF
+                    ]
+                };
+            } else {
+                return baseConfig;
+            }
+        }
+        
+        function onScanSuccess(decodedText, decodedResult) {
+            const format = decodedResult.result.format?.formatName || 'Unknown';
+            const type = format.includes('QR') ? 'QR 코드' : '바코드 (' + format + ')';
+            
+            // 중복 체크 (마지막 결과와 동일하면 무시)
+            if (results.length > 0 && results[0].data === decodedText) {
+                return;
+            }
+            
+            addResult(type, decodedText);
+            
+            // 진동 피드백
+            if (navigator.vibrate) {
+                navigator.vibrate(200);
+            }
+            
+            updateStatus('✓ 스캔 완료!', 'success');
+            setTimeout(() => {
+                if (scanning) {
+                    updateStatus('스캔 중... 코드를 카메라에 비춰주세요', 'scanning');
+                }
+            }, 1500);
+        }
+        
+        function onScanError(errorMessage) {
+            // 스캔 오류는 정상적인 동작이므로 무시
+        }
+        
+        function addResult(type, data) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ko-KR');
+            
+            results.unshift({ type, data, time: timeStr });
+            
+            // 최대 20개까지만 저장
+            if (results.length > 20) {
+                results.pop();
+            }
+            
+            updateResultsList();
+        }
+        
+        function updateResultsList() {
+            if (results.length === 0) {
+                resultsList.innerHTML = '<div class="no-results">아직 스캔된 코드가 없습니다</div>';
+                clearBtn.style.display = 'none';
+                return;
+            }
+            
+            resultsList.innerHTML = results.map(r => `
+                <div class="result-item">
+                    <div class="result-type">${r.type}</div>
+                    <div class="result-data">${escapeHtml(r.data)}</div>
+                    <div class="result-time">${r.time}</div>
+                </div>
+            `).join('');
+            
+            clearBtn.style.display = 'block';
+        }
+        
+        function updateStatus(text, className) {
+            statusDiv.textContent = text;
+            statusDiv.className = 'status ' + className;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 페이지 종료 시 카메라 정지
+        window.addEventListener('beforeunload', () => {
+            if (scanning) {
+                stopScanning();
+            }
+        });
+    </script>
+</body>
+</html>
