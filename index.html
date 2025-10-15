@@ -345,7 +345,7 @@
     
     <div class="container">
         <h1>QR & 바코드 스캐너</h1>
-        <div class="version">v2.1.0 | 2025-01-15</div>
+        <div class="version">v2.1.1 | 2025-01-15</div>
         
         <div class="count-display">
             인식된 페어: <span id="pairCount">0</span>개
@@ -572,8 +572,13 @@
             
             const config = getConfig();
             
+            // 후면 카메라 강제 설정
+            const cameraConfig = {
+                facingMode: { exact: "environment" }
+            };
+            
             await html5QrCode.start(
-                { facingMode: "environment" },
+                cameraConfig,
                 config,
                 onScanSuccess,
                 () => {}
@@ -590,14 +595,10 @@
             } else {
                 // 바코드 모드 - 검은 배경에 흰색 바코드 최적화
                 return {
-                    fps: 5,  // 느리게 해서 각 프레임을 정밀하게
-                    qrbox: { width: 350, height: 120 },  // 더 넓게
+                    fps: 5,
+                    qrbox: { width: 350, height: 120 },
                     aspectRatio: 2.9,
-                    disableFlip: false,  // 뒤집기 시도
-                    videoConstraints: {
-                        focusMode: 'continuous',
-                        advanced: [{ zoom: 1.5 }]  // 약간 줌인
-                    },
+                    disableFlip: false,
                     formatsToSupport: [
                         Html5QrcodeSupportedFormats.CODE_128,
                         Html5QrcodeSupportedFormats.CODE_39,
