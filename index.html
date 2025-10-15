@@ -673,14 +673,27 @@
             
             const code = data.codeResult.code;
             
+            // MAC 주소 형식 검증 (12자리 16진수)
+            const macPattern = /^[0-9A-Fa-f]{12}$/;
+            if (!macPattern.test(code)) {
+                console.log('잘못된 형식 무시:', code);
+                return;
+            }
+            
+            // 중복 방지
             if (code === lastBarcodeDetected) return;
             
+            // 신뢰도 체크 (더 엄격하게)
             if (data.codeResult.decodedCodes) {
                 const avgError = data.codeResult.decodedCodes.reduce((sum, code) => {
                     return sum + (code.error || 0);
                 }, 0) / data.codeResult.decodedCodes.length;
                 
-                if (avgError > 0.15) return;
+                // 에러율 10% 이하만 허용
+                if (avgError > 0.1) {
+                    console.log('신뢰도 낮음 무시:', code, 'error:', avgError);
+                    return;
+                }
             }
             
             lastBarcodeDetected = code;
@@ -693,11 +706,12 @@
                 lastBarcodeDetected = null;
             }, 300);
             
-            addResult(pendingQrData, code);
+            // 대문자로 변환하여 저장
+            addResult(pendingQrData, code.toUpperCase());
             
             playBeep();
             vibrate();
-            showToast('바코드 인식', '페어 완성');
+            showToast('바코드 인식', '페어 완성: ' + code.toUpperCase());
             
             pendingQrData = null;
             currentStep = 'qr';
