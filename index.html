@@ -412,7 +412,7 @@
     
     <div class="container">
         <h1>QR & 바코드 스캐너</h1>
-        <div class="version">v1.2.0 | 2025-01-15</div>
+        <div class="version">v1.3.0 | 2025-01-15</div>
         
         <div class="count-display">
             인식된 페어: <span id="pairCount">0</span>개
@@ -693,14 +693,31 @@
             barcodeReaderDiv.classList.add('active');
             
             try {
-                barcodeStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
-                });
+                const constraints = {
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        focusMode: 'continuous'
+                    }
+                };
+                
+                barcodeStream = await navigator.mediaDevices.getUserMedia(constraints);
                 
                 barcodeVideo.srcObject = barcodeStream;
                 barcodeVideo.play();
                 
-                barcodeReader = new ZXing.BrowserMultiFormatReader();
+                // ZXing 힌트 설정
+                const hints = new Map();
+                hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+                hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+                    ZXing.BarcodeFormat.CODE_128,
+                    ZXing.BarcodeFormat.CODE_39,
+                    ZXing.BarcodeFormat.EAN_13,
+                    ZXing.BarcodeFormat.EAN_8
+                ]);
+                
+                barcodeReader = new ZXing.BrowserMultiFormatReader(hints);
                 
                 scanBarcode();
                 
@@ -710,10 +727,19 @@
             }
         }
         
+        let lastScanTime = 0;
+        const scanInterval = 200; // 5 FPS (1000ms / 5 = 200ms)
+        
         function scanBarcode() {
             if (!scanning || currentStep !== 'barcode') return;
             
-            if (barcodeVideo.readyState === barcodeVideo.HAVE_ENOUGH_DATA) {
+            const now = Date.now();
+            
+            if (barcodeVideo.readyState === barcodeVideo.HAVE_ENOUGH_DATA && 
+                (now - lastScanTime) >= scanInterval) {
+                
+                lastScanTime = now;
+                
                 barcodeCanvas.width = barcodeVideo.videoWidth;
                 barcodeCanvas.height = barcodeVideo.videoHeight;
                 
