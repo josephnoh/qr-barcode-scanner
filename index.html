@@ -15,57 +15,55 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            background: #fff;
             padding: 15px;
         }
         
         .container {
             max-width: 600px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
         
         h1 {
             text-align: center;
             color: #333;
-            margin-bottom: 8px;
+            margin-bottom: 20px;
             font-size: 24px;
         }
         
-        .subtitle {
+        .count-display {
             text-align: center;
-            color: #666;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
             margin-bottom: 20px;
-            font-size: 13px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
         }
         
         .workflow-status {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #333;
             color: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
             text-align: center;
         }
         
         .workflow-step {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
         }
         
         .workflow-instruction {
             font-size: 14px;
-            opacity: 0.9;
         }
         
         .pending-qr {
-            background: #fef3c7;
-            border: 2px solid #fbbf24;
+            background: #fff3cd;
+            border: 2px solid #ffc107;
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 15px;
@@ -78,87 +76,72 @@
         
         .pending-label {
             font-size: 12px;
-            color: #92400e;
             font-weight: bold;
             margin-bottom: 4px;
         }
         
         .pending-value {
             font-size: 14px;
-            color: #78350f;
             font-weight: bold;
         }
         
-        #qr-reader {
-            border-radius: 10px;
+        #qr-reader, #barcode-reader {
+            border-radius: 8px;
             overflow: hidden;
             margin-bottom: 15px;
             background: #000;
             display: none;
         }
         
-        #qr-reader.active {
-            display: block;
-        }
-        
-        #barcode-reader {
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 15px;
-            background: #000;
-            position: relative;
-            display: none;
-        }
-        
-        #barcode-reader.active {
+        #qr-reader.active, #barcode-reader.active {
             display: block;
         }
         
         #barcode-reader video {
             width: 100%;
-            border-radius: 10px;
+            border-radius: 8px;
         }
         
         #barcode-reader canvas {
             display: none;
         }
         
-        .drawingBuffer {
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-        
         .controls {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         .btn {
-            flex: 1;
             padding: 15px;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
-            -webkit-tap-highlight-color: transparent;
         }
         
         .btn-start {
-            background: #10b981;
+            background: #28a745;
             color: white;
         }
         
         .btn-stop {
-            background: #ef4444;
+            background: #dc3545;
             color: white;
         }
         
-        .btn:active {
-            transform: scale(0.95);
+        .btn-save {
+            background: #007bff;
+            color: white;
+            width: 100%;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .btn-save.show {
+            display: block;
         }
         
         .btn:disabled {
@@ -168,38 +151,36 @@
         
         .status {
             text-align: center;
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: bold;
+            margin-bottom: 15px;
             font-size: 14px;
         }
         
         .status.ready {
-            background: #e0e7ff;
-            color: #4338ca;
+            background: #e7f3ff;
+            color: #004085;
         }
         
         .status.scanning {
-            background: #dbeafe;
-            color: #1e40af;
+            background: #d1ecf1;
+            color: #0c5460;
         }
         
         .status.stopped {
-            background: #fee2e2;
-            color: #991b1b;
+            background: #f8d7da;
+            color: #721c24;
         }
         
         .status.success {
-            background: #d1fae5;
-            color: #065f46;
+            background: #d4edda;
+            color: #155724;
         }
         
         .results {
-            background: #f9fafb;
-            border-radius: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
             padding: 15px;
-            min-height: 100px;
         }
         
         .results h3 {
@@ -213,19 +194,7 @@
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 10px;
-            border-left: 4px solid #667eea;
-            animation: slideIn 0.3s;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+            border-left: 4px solid #333;
         }
         
         .result-pair {
@@ -236,17 +205,16 @@
         }
         
         .result-field {
-            background: #f9fafb;
+            background: #f9f9f9;
             padding: 8px;
             border-radius: 6px;
         }
         
         .result-label {
-            font-size: 10px;
-            color: #667eea;
+            font-size: 11px;
             font-weight: bold;
             margin-bottom: 3px;
-            text-transform: uppercase;
+            color: #666;
         }
         
         .result-value {
@@ -258,7 +226,6 @@
         .result-time {
             font-size: 10px;
             color: #999;
-            margin-top: 5px;
         }
         
         .no-results {
@@ -271,18 +238,13 @@
         .clear-btn {
             width: 100%;
             padding: 10px;
-            background: #f3f4f6;
-            color: #666;
+            background: #6c757d;
+            color: white;
             border: none;
             border-radius: 8px;
             font-size: 13px;
             cursor: pointer;
             margin-top: 10px;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .clear-btn:active {
-            background: #e5e7eb;
         }
 
         .toast {
@@ -290,15 +252,15 @@
             top: -100px;
             left: 50%;
             transform: translateX(-50%);
-            background: #10b981;
+            background: #28a745;
             color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             z-index: 1000;
             max-width: 90%;
             text-align: center;
-            transition: top 0.4s ease;
+            transition: top 0.3s ease;
         }
 
         .toast.show {
@@ -313,18 +275,13 @@
 
         .toast-text {
             font-size: 13px;
-            opacity: 0.9;
-            word-break: break-all;
-            max-height: 40px;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         .settings {
-            background: #f9fafb;
-            border-radius: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
             padding: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .setting-item {
@@ -381,7 +338,7 @@
         }
 
         input:checked + .slider {
-            background-color: #667eea;
+            background-color: #28a745;
         }
 
         input:checked + .slider:before {
@@ -396,8 +353,11 @@
     </div>
     
     <div class="container">
-        <h1>📱 QR & 바코드 페어 스캐너</h1>
-        <p class="subtitle">QR → 바코드 순서로 자동 인식</p>
+        <h1>QR & 바코드 스캐너</h1>
+        
+        <div class="count-display">
+            인식된 페어: <span id="pairCount">0</span>개
+        </div>
         
         <div class="workflow-status">
             <div class="workflow-step" id="workflowStep">1단계: QR 코드 스캔</div>
@@ -405,20 +365,20 @@
         </div>
 
         <div class="pending-qr" id="pendingQr">
-            <div class="pending-label">대기 중인 QR 코드 (마지막 6자리)</div>
+            <div class="pending-label">대기 중인 QR (마지막 6자리)</div>
             <div class="pending-value" id="pendingValue">-</div>
         </div>
 
         <div class="settings">
             <div class="setting-item">
-                <span class="setting-label">🔊 소리</span>
+                <span class="setting-label">소리</span>
                 <label class="switch">
                     <input type="checkbox" id="soundToggle" checked>
                     <span class="slider"></span>
                 </label>
             </div>
             <div class="setting-item">
-                <span class="setting-label">📳 진동</span>
+                <span class="setting-label">진동</span>
                 <label class="switch">
                     <input type="checkbox" id="vibrationToggle" checked>
                     <span class="slider"></span>
@@ -432,12 +392,14 @@
         <div id="barcode-reader"></div>
         
         <div class="controls">
-            <button id="startBtn" class="btn btn-start">▶ 스캔 시작</button>
-            <button id="stopBtn" class="btn btn-stop" disabled>⏹ 정지</button>
+            <button id="startBtn" class="btn btn-start">스캔 시작</button>
+            <button id="stopBtn" class="btn btn-stop" disabled>정지</button>
         </div>
         
+        <button id="saveBtn" class="btn btn-save">클립보드에 저장</button>
+        
         <div class="results">
-            <h3>📋 스캔 결과 (QR + 바코드 쌍)</h3>
+            <h3>스캔 결과</h3>
             <div id="results-list">
                 <div class="no-results">아직 스캔된 코드가 없습니다</div>
             </div>
@@ -450,17 +412,16 @@
         let html5QrCode = null;
         const results = [];
         
-        // 워크플로우 상태
-        let currentStep = 'qr'; // 'qr' 또는 'barcode'
+        let currentStep = 'qr';
         let pendingQrData = null;
         let lastBarcodeDetected = null;
         let barcodeDetectionTimeout = null;
         
-        // 오디오 컨텍스트
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const saveBtn = document.getElementById('saveBtn');
         const statusDiv = document.getElementById('status');
         const resultsList = document.getElementById('results-list');
         const clearBtn = document.getElementById('clearBtn');
@@ -475,6 +436,7 @@
         const pendingValue = document.getElementById('pendingValue');
         const qrReaderDiv = document.getElementById('qr-reader');
         const barcodeReaderDiv = document.getElementById('barcode-reader');
+        const pairCount = document.getElementById('pairCount');
         
         let toastTimeout = null;
         
@@ -484,7 +446,7 @@
             }
             
             toastTitle.textContent = title;
-            toastText.textContent = text.length > 50 ? text.substring(0, 50) + '...' : text;
+            toastText.textContent = text;
             
             toast.classList.add('show');
             
@@ -533,11 +495,38 @@
             }
         }
         
+        function updateCount() {
+            pairCount.textContent = results.length;
+            
+            if (results.length > 0) {
+                saveBtn.classList.add('show');
+            } else {
+                saveBtn.classList.remove('show');
+            }
+        }
+        
         startBtn.addEventListener('click', startScanning);
         stopBtn.addEventListener('click', stopScanning);
+        
+        saveBtn.addEventListener('click', () => {
+            let csvContent = 'QR, MAC\n';
+            results.forEach(r => {
+                csvContent += `${r.qr}, ${r.barcode}\n`;
+            });
+            
+            navigator.clipboard.writeText(csvContent).then(() => {
+                showToast('저장 완료', '클립보드에 복사되었습니다');
+            }).catch(err => {
+                alert('클립보드 복사 실패: ' + err);
+            });
+        });
+        
         clearBtn.addEventListener('click', () => {
-            results.length = 0;
-            updateResultsList();
+            if (confirm('모든 데이터를 삭제하시겠습니까?')) {
+                results.length = 0;
+                updateResultsList();
+                updateCount();
+            }
         });
         
         async function startScanning() {
@@ -562,7 +551,7 @@
             } catch (err) {
                 console.error('스캔 시작 실패:', err);
                 updateStatus('카메라 접근 실패', 'stopped');
-                alert('카메라를 시작할 수 없습니다.\n\n카메라 권한을 확인해주세요.');
+                alert('카메라를 시작할 수 없습니다.');
             }
         }
         
@@ -573,9 +562,7 @@
                 try {
                     await html5QrCode.stop();
                     html5QrCode.clear();
-                } catch (err) {
-                    console.error('QR 스캐너 정지 오류:', err);
-                }
+                } catch (err) {}
             }
             
             if (Quagga) {
@@ -672,7 +659,7 @@
             
             playBeep();
             vibrate();
-            showToast('✓ QR 코드 인식!', '마지막 6자리: ' + last6);
+            showToast('QR 코드 인식', '마지막 6자리: ' + last6);
             
             currentStep = 'barcode';
             updateWorkflowUI();
@@ -686,22 +673,18 @@
             
             const code = data.codeResult.code;
             
-            // 중복 방지 (같은 바코드를 연속으로 읽지 않도록)
             if (code === lastBarcodeDetected) return;
             
-            // 신뢰도 확인
             if (data.codeResult.decodedCodes) {
                 const avgError = data.codeResult.decodedCodes.reduce((sum, code) => {
                     return sum + (code.error || 0);
                 }, 0) / data.codeResult.decodedCodes.length;
                 
-                // 에러율이 너무 높으면 무시
                 if (avgError > 0.15) return;
             }
             
             lastBarcodeDetected = code;
             
-            // 300ms 이내에 같은 바코드가 다시 감지되지 않도록
             if (barcodeDetectionTimeout) {
                 clearTimeout(barcodeDetectionTimeout);
             }
@@ -714,7 +697,7 @@
             
             playBeep();
             vibrate();
-            showToast('✓ 바코드 인식!', '페어 완성: ' + code);
+            showToast('바코드 인식', '페어 완성');
             
             pendingQrData = null;
             currentStep = 'qr';
@@ -735,11 +718,12 @@
                 time: timeStr 
             });
             
-            if (results.length > 20) {
+            if (results.length > 50) {
                 results.pop();
             }
             
             updateResultsList();
+            updateCount();
         }
         
         function updateResultsList() {
@@ -757,11 +741,11 @@
                             <div class="result-value">${escapeHtml(r.qr)}</div>
                         </div>
                         <div class="result-field">
-                            <div class="result-label">바코드</div>
+                            <div class="result-label">MAC Address</div>
                             <div class="result-value">${escapeHtml(r.barcode)}</div>
                         </div>
                     </div>
-                    <div class="result-time">#${results.length - index} • ${r.time}</div>
+                    <div class="result-time">#${results.length - index} - ${r.time}</div>
                 </div>
             `).join('');
             
@@ -784,6 +768,8 @@
                 stopScanning();
             }
         });
+        
+        updateCount();
     </script>
 </body>
 </html>
