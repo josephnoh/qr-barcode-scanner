@@ -345,7 +345,7 @@
     
     <div class="container">
         <h1>QR & 바코드 스캐너</h1>
-        <div class="version">v2.0.0 | 2025-01-15</div>
+        <div class="version">v2.1.0 | 2025-01-15</div>
         
         <div class="count-display">
             인식된 페어: <span id="pairCount">0</span>개
@@ -588,20 +588,25 @@
                     formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
                 };
             } else {
-                // 바코드 모드 - 가로로 긴 박스, 다양한 형식 지원
+                // 바코드 모드 - 검은 배경에 흰색 바코드 최적화
                 return {
-                    fps: 10,
-                    qrbox: { width: 320, height: 140 },
-                    aspectRatio: 2.3,
+                    fps: 5,  // 느리게 해서 각 프레임을 정밀하게
+                    qrbox: { width: 350, height: 120 },  // 더 넓게
+                    aspectRatio: 2.9,
+                    disableFlip: false,  // 뒤집기 시도
+                    videoConstraints: {
+                        focusMode: 'continuous',
+                        advanced: [{ zoom: 1.5 }]  // 약간 줌인
+                    },
                     formatsToSupport: [
                         Html5QrcodeSupportedFormats.CODE_128,
                         Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.CODE_93,
                         Html5QrcodeSupportedFormats.EAN_13,
                         Html5QrcodeSupportedFormats.EAN_8,
                         Html5QrcodeSupportedFormats.UPC_A,
                         Html5QrcodeSupportedFormats.UPC_E,
                         Html5QrcodeSupportedFormats.CODABAR,
-                        Html5QrcodeSupportedFormats.CODE_93,
                         Html5QrcodeSupportedFormats.ITF
                     ]
                 };
