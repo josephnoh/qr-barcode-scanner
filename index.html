@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>QR & 바코드 스캐너</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
     <style>
         * {
             margin: 0;
@@ -28,6 +29,13 @@
             color: #333;
             margin-bottom: 20px;
             font-size: 24px;
+        }
+        
+        .version {
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 20px;
         }
         
         .count-display {
@@ -84,10 +92,76 @@
             font-weight: bold;
         }
         
-        #reader {
+        #qr-reader {
             border-radius: 8px;
             overflow: hidden;
             margin-bottom: 15px;
+            display: none;
+        }
+        
+        #qr-reader.active {
+            display: block;
+        }
+        
+        #barcode-reader {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            background: #000;
+            display: none;
+        }
+        
+        #barcode-reader.active {
+            display: block;
+        }
+        
+        #barcode-video {
+            width: 100%;
+            border-radius: 8px;
+        }
+        
+        #barcode-canvas {
+            display: none;
+        }
+        
+        .scan-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 35%;
+            border: 3px solid #00ff00;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+        
+        .scan-guide-corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #00ff00;
+        }
+        
+        .corner-tl { top: -3px; left: -3px; border-right: none; border-bottom: none; }
+        .corner-tr { top: -3px; right: -3px; border-left: none; border-bottom: none; }
+        .corner-bl { bottom: -3px; left: -3px; border-right: none; border-top: none; }
+        .corner-br { bottom: -3px; right: -3px; border-left: none; border-top: none; }
+        
+        .scan-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+            animation: scanAnimation 2s ease-in-out infinite;
+        }
+        
+        @keyframes scanAnimation {
+            0%, 100% { top: 0; }
+            50% { top: 100%; }
         }
         
         .controls {
@@ -338,6 +412,7 @@
     
     <div class="container">
         <h1>QR & 바코드 스캐너</h1>
+        <div class="version">v1.2.0 | 2025-01-15</div>
         
         <div class="count-display">
             인식된 페어: <span id="pairCount">0</span>개
@@ -372,7 +447,18 @@
         
         <div id="status" class="status ready">시작 버튼을 눌러주세요</div>
         
-        <div id="reader"></div>
+        <div id="qr-reader"></div>
+        <div id="barcode-reader">
+            <video id="barcode-video" playsinline></video>
+            <canvas id="barcode-canvas"></canvas>
+            <div class="scan-guide">
+                <div class="scan-guide-corner corner-tl"></div>
+                <div class="scan-guide-corner corner-tr"></div>
+                <div class="scan-guide-corner corner-bl"></div>
+                <div class="scan-guide-corner corner-br"></div>
+                <div class="scan-line"></div>
+            </div>
+        </div>
         
         <div class="controls">
             <button id="startBtn" class="btn btn-start">스캔 시작</button>
@@ -393,6 +479,9 @@
     <script>
         let scanning = false;
         let html5QrCode = null;
+        let barcodeReader = null;
+        let barcodeStream = null;
+        let barcodeAnimationId = null;
         const results = [];
         
         let currentStep = 'qr';
@@ -418,6 +507,10 @@
         const pendingQr = document.getElementById('pendingQr');
         const pendingValue = document.getElementById('pendingValue');
         const pairCount = document.getElementById('pairCount');
+        const qrReaderDiv = document.getElementById('qr-reader');
+        const barcodeReaderDiv = document.getElementById('barcode-reader');
+        const barcodeVideo = document.getElementById('barcode-video');
+        const barcodeCanvas = document.getElementById('barcode-canvas');
         
         let toastTimeout = null;
         
@@ -470,7 +563,7 @@
                 pendingQr.classList.remove('show');
             } else {
                 workflowStep.textContent = '2단계: 바코드 스캔';
-                workflowInstruction.textContent = '바코드를 박스 안에 수평으로 맞춰주세요';
+                workflowInstruction.textContent = '바코드를 녹색 박스 안에 수평으로 맞춰주세요';
                 pendingQr.classList.add('show');
                 pendingValue.textContent = pendingQrData;
             }
@@ -522,7 +615,7 @@
                 pendingQrData = null;
                 updateWorkflowUI();
                 
-                await startScanner();
+                await startQRScanner();
                 
                 scanning = true;
                 startBtn.disabled = true;
@@ -546,9 +639,22 @@
                 } catch (err) {}
             }
             
+            if (barcodeStream) {
+                barcodeStream.getTracks().forEach(track => track.stop());
+                barcodeStream = null;
+            }
+            
+            if (barcodeAnimationId) {
+                cancelAnimationFrame(barcodeAnimationId);
+                barcodeAnimationId = null;
+            }
+            
             if (detectionTimeout) {
                 clearTimeout(detectionTimeout);
             }
+            
+            qrReaderDiv.classList.remove('active');
+            barcodeReaderDiv.classList.remove('active');
             
             startBtn.disabled = false;
             stopBtn.disabled = true;
@@ -559,135 +665,144 @@
             updateStatus('스캔 정지됨', 'stopped');
         }
         
-        async function startScanner() {
-            html5QrCode = new Html5Qrcode("reader");
+        async function startQRScanner() {
+            qrReaderDiv.classList.add('active');
+            barcodeReaderDiv.classList.remove('active');
             
-            const config = getConfig();
+            html5QrCode = new Html5Qrcode("qr-reader");
             
             await html5QrCode.start(
                 { facingMode: "environment" },
-                config,
-                onScanSuccess,
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+                },
+                onQRSuccess,
                 () => {}
             );
         }
         
-        function getConfig() {
-            if (currentStep === 'qr') {
-                return {
-                    fps: 5,
-                    qrbox: { width: 250, height: 250 },
-                    formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
-                };
-            } else {
-                // 바코드 모드 - 가로로 긴 박스
-                return {
-                    fps: 10,
-                    qrbox: { width: 300, height: 120 },
-                    formatsToSupport: [
-                        Html5QrcodeSupportedFormats.CODE_128,
-                        Html5QrcodeSupportedFormats.CODE_39,
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.EAN_8,
-                        Html5QrcodeSupportedFormats.UPC_A,
-                        Html5QrcodeSupportedFormats.UPC_E
-                    ]
-                };
+        async function startBarcodeScanner() {
+            if (html5QrCode) {
+                await html5QrCode.stop();
+                html5QrCode.clear();
             }
-        }
-        
-        async function switchToBarcode() {
-            if (!scanning) return;
+            
+            qrReaderDiv.classList.remove('active');
+            barcodeReaderDiv.classList.add('active');
             
             try {
-                await html5QrCode.stop();
+                barcodeStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
                 
-                currentStep = 'barcode';
-                updateWorkflowUI();
-                updateStatus('바코드 스캔 중...', 'scanning');
+                barcodeVideo.srcObject = barcodeStream;
+                barcodeVideo.play();
                 
-                await startScanner();
+                barcodeReader = new ZXing.BrowserMultiFormatReader();
+                
+                scanBarcode();
                 
             } catch (err) {
-                console.error('바코드 모드 전환 실패:', err);
+                console.error('바코드 스캐너 시작 실패:', err);
+                alert('바코드 스캐너를 시작할 수 없습니다.');
             }
         }
         
-        async function switchToQR() {
-            if (!scanning) return;
+        function scanBarcode() {
+            if (!scanning || currentStep !== 'barcode') return;
             
-            try {
-                await html5QrCode.stop();
+            if (barcodeVideo.readyState === barcodeVideo.HAVE_ENOUGH_DATA) {
+                barcodeCanvas.width = barcodeVideo.videoWidth;
+                barcodeCanvas.height = barcodeVideo.videoHeight;
                 
-                currentStep = 'qr';
-                updateWorkflowUI();
-                updateStatus('QR 코드 스캔 중...', 'scanning');
+                const ctx = barcodeCanvas.getContext('2d');
+                ctx.drawImage(barcodeVideo, 0, 0, barcodeCanvas.width, barcodeCanvas.height);
                 
-                await startScanner();
-                
-            } catch (err) {
-                console.error('QR 모드 전환 실패:', err);
+                try {
+                    const result = barcodeReader.decodeFromCanvas(barcodeCanvas);
+                    
+                    if (result) {
+                        onBarcodeSuccess(result.text);
+                    }
+                } catch (err) {
+                    // 바코드가 없으면 계속 시도
+                }
             }
+            
+            barcodeAnimationId = requestAnimationFrame(scanBarcode);
         }
         
-        function onScanSuccess(decodedText, decodedResult) {
-            const format = decodedResult.result.format?.formatName || '';
-            const isQR = format.includes('QR');
+        function onQRSuccess(decodedText) {
+            if (currentStep !== 'qr') return;
             
-            // 중복 방지
             if (decodedText === lastDetectedCode) return;
             
-            if (currentStep === 'qr' && isQR) {
-                // QR 코드 인식
-                const last6 = decodedText.slice(-6);
-                pendingQrData = last6;
-                lastDetectedCode = decodedText;
-                
-                playBeep();
-                vibrate();
-                showToast('QR 코드 인식', '마지막 6자리: ' + last6);
-                
-                // 중복 방지 타이머
-                if (detectionTimeout) clearTimeout(detectionTimeout);
-                detectionTimeout = setTimeout(() => {
-                    lastDetectedCode = null;
-                }, 500);
-                
-                // 바코드 모드로 전환
-                switchToBarcode();
-                
-            } else if (currentStep === 'barcode' && !isQR) {
-                // 바코드 인식
-                const code = decodedText.toUpperCase();
-                
-                // MAC 주소 형식 검증 (12자리 16진수)
-                const macPattern = /^[0-9A-F]{12}$/;
-                if (!macPattern.test(code)) {
-                    console.log('잘못된 MAC 형식 무시:', code);
-                    return;
-                }
-                
-                if (pendingQrData) {
-                    lastDetectedCode = decodedText;
-                    
-                    addResult(pendingQrData, code);
-                    
-                    playBeep();
-                    vibrate();
-                    showToast('바코드 인식', '페어 완성: ' + code);
-                    
-                    pendingQrData = null;
-                    
-                    // 중복 방지 타이머
-                    if (detectionTimeout) clearTimeout(detectionTimeout);
-                    detectionTimeout = setTimeout(() => {
-                        lastDetectedCode = null;
-                    }, 500);
-                    
-                    // QR 모드로 전환
-                    switchToQR();
-                }
+            const last6 = decodedText.slice(-6);
+            pendingQrData = last6;
+            lastDetectedCode = decodedText;
+            
+            playBeep();
+            vibrate();
+            showToast('QR 코드 인식', '마지막 6자리: ' + last6);
+            
+            if (detectionTimeout) clearTimeout(detectionTimeout);
+            detectionTimeout = setTimeout(() => {
+                lastDetectedCode = null;
+            }, 500);
+            
+            currentStep = 'barcode';
+            updateWorkflowUI();
+            updateStatus('바코드 스캔 중...', 'scanning');
+            
+            startBarcodeScanner();
+        }
+        
+        function onBarcodeSuccess(decodedText) {
+            if (currentStep !== 'barcode' || !pendingQrData) return;
+            
+            if (decodedText === lastDetectedCode) return;
+            
+            const code = decodedText.toUpperCase();
+            
+            // MAC 주소 형식 검증 (12자리 16진수)
+            const macPattern = /^[0-9A-F]{12}$/;
+            if (!macPattern.test(code)) {
+                console.log('잘못된 MAC 형식 무시:', code);
+                return;
             }
+            
+            lastDetectedCode = decodedText;
+            
+            addResult(pendingQrData, code);
+            
+            playBeep();
+            vibrate();
+            showToast('바코드 인식', '페어 완성: ' + code);
+            
+            pendingQrData = null;
+            
+            if (detectionTimeout) clearTimeout(detectionTimeout);
+            detectionTimeout = setTimeout(() => {
+                lastDetectedCode = null;
+            }, 500);
+            
+            currentStep = 'qr';
+            updateWorkflowUI();
+            updateStatus('QR 코드 스캔 중...', 'scanning');
+            
+            if (barcodeStream) {
+                barcodeStream.getTracks().forEach(track => track.stop());
+                barcodeStream = null;
+            }
+            
+            if (barcodeAnimationId) {
+                cancelAnimationFrame(barcodeAnimationId);
+                barcodeAnimationId = null;
+            }
+            
+            startQRScanner();
         }
         
         function addResult(qrLast6, barcodeData) {
