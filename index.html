@@ -221,6 +221,74 @@
         .clear-btn:active {
             background: #e5e7eb;
         }
+
+        .settings {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .setting-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 28px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
     </style>
 </head>
 <body>
@@ -232,6 +300,23 @@
             <button class="mode-btn active" data-mode="both">전체</button>
             <button class="mode-btn" data-mode="qr">QR만</button>
             <button class="mode-btn" data-mode="barcode">바코드만</button>
+        </div>
+
+        <div class="settings">
+            <div class="setting-item">
+                <span class="setting-label">🔊 소리</span>
+                <label class="switch">
+                    <input type="checkbox" id="soundToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <span class="setting-label">📳 진동</span>
+                <label class="switch">
+                    <input type="checkbox" id="vibrationToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
         
         <div id="status" class="status ready">시작 버튼을 눌러주세요</div>
@@ -258,11 +343,45 @@
         let html5QrCode = null;
         const results = [];
         
+        // 오디오 컨텍스트 생성
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
         const statusDiv = document.getElementById('status');
         const resultsList = document.getElementById('results-list');
         const clearBtn = document.getElementById('clearBtn');
+        const soundToggle = document.getElementById('soundToggle');
+        const vibrationToggle = document.getElementById('vibrationToggle');
+        
+        // 비프음 재생 함수
+        function playBeep() {
+            if (!soundToggle.checked) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800; // 800Hz
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+        
+        // 진동 함수
+        function vibrate() {
+            if (!vibrationToggle.checked) return;
+            
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]); // 패턴: 100ms 진동, 50ms 정지, 100ms 진동
+            }
+        }
         
         // 모드 선택
         document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -292,6 +411,11 @@
         
         async function startScanning() {
             try {
+                // 오디오 컨텍스트 재개 (모바일 브라우저 정책)
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
                 updateStatus('카메라 시작 중...', 'scanning');
                 
                 const config = getConfig();
@@ -336,7 +460,9 @@
         function getConfig() {
             const baseConfig = {
                 fps: 10,
-                qrbox: { width: 250, height: 250 }
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0,
+                disableFlip: false
             };
             
             if (currentMode === 'qr') {
@@ -347,6 +473,8 @@
             } else if (currentMode === 'barcode') {
                 return {
                     ...baseConfig,
+                    fps: 20, // 바코드는 더 높은 FPS
+                    qrbox: { width: 300, height: 150 }, // 바코드는 가로로 긴 박스
                     formatsToSupport: [
                         Html5QrcodeSupportedFormats.EAN_13,
                         Html5QrcodeSupportedFormats.EAN_8,
@@ -355,11 +483,15 @@
                         Html5QrcodeSupportedFormats.CODE_128,
                         Html5QrcodeSupportedFormats.CODE_39,
                         Html5QrcodeSupportedFormats.CODE_93,
-                        Html5QrcodeSupportedFormats.ITF
+                        Html5QrcodeSupportedFormats.ITF,
+                        Html5QrcodeSupportedFormats.CODABAR
                     ]
                 };
             } else {
-                return baseConfig;
+                return {
+                    ...baseConfig,
+                    fps: 15
+                };
             }
         }
         
@@ -374,10 +506,11 @@
             
             addResult(type, decodedText);
             
-            // 진동 피드백
-            if (navigator.vibrate) {
-                navigator.vibrate(200);
-            }
+            // 소리 재생
+            playBeep();
+            
+            // 진동
+            vibrate();
             
             updateStatus('✓ 스캔 완료!', 'success');
             setTimeout(() => {
